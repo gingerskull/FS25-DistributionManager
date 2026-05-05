@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<GUI name="ingameMenuDistributionManager">
+    <GuiElement profile="ingameMenuDistributionManagerContainer">
+        <!-- Header -->
+        <GuiElement profile="ingameMenuDistributionManagerHeaderPanel">
+            <Bitmap profile="ingameMenuDistributionManagerHeaderIconBg">
+                <Bitmap profile="ingameMenuDistributionManagerHeaderIcon"/>
+            </Bitmap>
+            <Text profile="ingameMenuDistributionManagerHeaderTitle" id="categoryHeaderText" text="$l10n_dm_menuTitle"/>
+            <RoundCorner profile="ingameMenuDistributionManagerMoneyBoxBg" id="shopMoneyBoxBg"/>
+            <BoxLayout profile="ingameMenuDistributionManagerMoneyBox" id="shopMoneyBox">
+                <Text profile="ingameMenuDistributionManagerBalance" text="$l10n_ui_balance:"/>
+                <Text profile="ingameMenuDistributionManagerMoney" id="currentBalanceText"/>
+            </BoxLayout>
+        </GuiElement>
+
+        <!-- Column headers -->
+        <GuiElement profile="ingameMenuDistributionManagerHeaderBox">
+            <Button profile="ingameMenuDistributionManagerHeader" position="0px 0px" size="40px 32px" text="" handleFocus="false"/>
+            <Button profile="ingameMenuDistributionManagerHeader" position="40px 0px" size="250px 32px" text="$l10n_dm_productionColumn" handleFocus="false"/>
+            <Button profile="ingameMenuDistributionManagerHeader" position="290px 0px" size="250px 32px" text="$l10n_dm_productColumn" handleFocus="false"/>
+            <Button profile="ingameMenuDistributionManagerHeader" position="540px 0px" size="150px 32px" text="$l10n_dm_modeColumn" handleFocus="false"/>
+            <Button profile="ingameMenuDistributionManagerHeader" position="690px 0px" size="150px 32px" text="$l10n_dm_destinationsColumn" handleFocus="false"/>
+        </GuiElement>
+
+        <!-- Data list -->
+        <SmoothList profile="ingameMenuDistributionManagerList" id="distributionTable">
+            <ListItem profile="ingameMenuDistributionManagerListItem">
+                <Bitmap profile="ingameMenuDistributionManagerRowCellImage" name="icon"/>
+                <Text profile="ingameMenuDistributionManagerRowCellLeft" position="40px 0px" name="production"/>
+                <Text profile="ingameMenuDistributionManagerRowCellLeft" position="290px 0px" name="product"/>
+                <Text profile="ingameMenuDistributionManagerRowCellLeft" position="540px 0px" name="mode"/>
+                <Text profile="ingameMenuDistributionManagerRowCellLeft" position="690px 0px" name="destinations"/>
+            </ListItem>
+        </SmoothList>
+
+        <!-- Slider -->
+        <GuiElement profile="ingameMenuDistributionManagerSliderBox">
+            <Slider profile="ingameMenuDistributionManagerSlider" dataElementId="distributionTable"/>
+        </GuiElement>
+    </GuiElement>
+</GUI>

@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<GUIProfiles>
+    <!-- Menu page container -->
+    <Profile name="ingameMenuDistributionManagerContainer" extends="emptyPanel">
+        <size value="100% 100%"/>
+    </Profile>
+
+    <!-- Header panel -->
+    <Profile name="ingameMenuDistributionManagerHeaderPanel" extends="emptyPanel" with="anchorTopStretchingX">
+        <size value="100% 80px"/>
+        <imageColor value="0 0 0 0.5"/>
+    </Profile>
+
+    <!-- Header icon background -->
+    <Profile name="ingameMenuDistributionManagerHeaderIconBg" extends="baseReference" with="anchorMiddleLeft">
+        <size value="60px 60px"/>
+        <position value="20px 0px"/>
+        <imageSliceId value="gui.icon_ingameMenu_statistics"/>
+        <imageColor value="$preset_fs25_colorMainDark"/>
+    </Profile>
+
+    <!-- Header icon -->
+    <Profile name="ingameMenuDistributionManagerHeaderIcon" extends="baseReference" with="anchorMiddleCenter">
+        <size value="50px 50px"/>
+        <imageFilename value="images/menuIcon.dds"/>
+    </Profile>
+
+    <!-- Header title -->
+    <Profile name="ingameMenuDistributionManagerHeaderTitle" extends="baseReference" with="anchorMiddleLeft">
+        <position value="90px 0px"/>
+        <size value="400px 40px"/>
+        <textSize value="24px"/>
+        <textBold value="true"/>
+        <textColor value="$preset_colorWhite"/>
+        <textAlignment value="left"/>
+    </Profile>
+
+    <!-- Money box background -->
+    <Profile name="ingameMenuDistributionManagerMoneyBoxBg" extends="baseReference" with="anchorMiddleRight">
+        <size value="200px 40px"/>
+        <position value="-20px 0px"/>
+        <imageSliceId value="gui.shopMoneyBoxBg"/>
+    </Profile>
+
+    <!-- Money box layout -->
+    <Profile name="ingameMenuDistributionManagerMoneyBox" extends="emptyPanel">
+        <size value="100% 100%"/>
+        <flowDirection value="horizontal"/>
+        <alignmentX value="right"/>
+        <alignmentY value="middle"/>
+    </Profile>
+
+    <!-- Balance label -->
+    <Profile name="ingameMenuDistributionManagerBalance" extends="baseReference">
+        <textSize value="16px"/>
+        <textColor value="$preset_colorWhite_50"/>
+        <textAlignment value="right"/>
+    </Profile>
+
+    <!-- Money value -->
+    <Profile name="ingameMenuDistributionManagerMoney" extends="baseReference">
+        <textSize value="18px"/>
+        <textBold value="true"/>
+        <textColor value="$preset_colorWhite"/>
+        <textAlignment value="right"/>
+    </Profile>
+
+    <!-- Column header row -->
+    <Profile name="ingameMenuDistributionManagerHeaderBox" extends="emptyPanel" with="anchorTopStretchingX">
+        <size value="100% 40px"/>
+        <position value="0px -90px"/>
+        <imageColor value="0 0 0 0.35"/>
+        <flowDirection value="horizontal"/>
+        <wrapAround value="true"/>
+    </Profile>
+
+    <!-- Column header button -->
+    <Profile name="ingameMenuDistributionManagerHeader" extends="baseReference">
+        <size value="150px 32px"/>
+        <imageColor value="0 0 0 0"/>
+        <textSize value="14px"/>
+        <textBold value="true"/>
+        <textUpperCase value="true"/>
+        <textColor value="$preset_colorWhite_50"/>
+        <textAlignment value="left"/>
+        <textDisabledColor value="$preset_colorDisabled"/>
+    </Profile>
+
+    <!-- List container -->
+    <Profile name="ingameMenuDistributionManagerList" extends="emptyPanel" with="anchorTopLeft">
+        <position value="20px -130px"/>
+        <size value="900px 500px"/>
+    </Profile>
+
+    <!-- List item row -->
+    <Profile name="ingameMenuDistributionManagerListItem" extends="baseReference" with="anchorTopStretchingX">
+        <height value="40px"/>
+        <imageColor value="0.1 0.1 0.1 0.3"/>
+        <imageSelectedColor value="0.0227 0.5346 0.8519 0.5"/>
+    </Profile>
+
+    <!-- Cell image (icon) -->
+    <Profile name="ingameMenuDistributionManagerRowCellImage" extends="baseReference" with="anchorMiddleLeft">
+        <size value="32px 32px"/>
+        <position value="4px 0px"/>
+        <imageSliceId value="noSlice"/>
+    </Profile>
+
+    <!-- Cell text -->
+    <Profile name="ingameMenuDistributionManagerRowCellLeft" extends="baseReference" with="anchorStretchingYLeft">
+        <size value="200px 32px"/>
+        <textSize value="14px"/>
+        <textColor value="$preset_fs25_colorMainLight"/>
+        <textSelectedColor value="$preset_colorWhite"/>
+        <textAlignment value="left"/>
+    </Profile>
+
+    <!-- Slider box -->
+    <Profile name="ingameMenuDistributionManagerSliderBox" extends="baseReference" with="anchorTopRight">
+        <position value="930px -130px"/>
+        <size value="30px 500px"/>
+    </Profile>
+
+    <!-- Slider -->
+    <Profile name="ingameMenuDistributionManagerSlider" extends="baseReference">
+        <size value="100% 100%"/>
+    </Profile>
+
+    <!-- Dialog background -->
+    <Profile name="dm_dialogBg" extends="emptyPanel" with="anchorMiddleCenter">
+        <size value="800px 600px"/>
+        <imageColor value="0.08 0.08 0.08 0.95"/>
+    </Profile>
+
+    <!-- Dialog title -->
+    <Profile name="dm_dialogTitle" extends="baseReference">
+        <textSize value="22px"/>
+        <textBold value="true"/>
+        <textColor value="$preset_colorWhite"/>
+        <textAlignment value="center"/>
+    </Profile>
+
+    <!-- Dialog text -->
+    <Profile name="dm_dialogText" extends="baseReference">
+        <textSize value="16px"/>
+        <textColor value="$preset_colorWhite"/>
+        <textAlignment value="center"/>
+    </Profile>
+
+    <!-- Dialog list container -->
+    <Profile name="dm_dialogListContainer" extends="emptyPanel">
+        <size value="700px 350px"/>
+        <position value="0px -150px"/>
+    </Profile>
+
+    <!-- Dialog list -->
+    <Profile name="dm_dialogList" extends="emptyPanel">
+        <size value="700px 350px"/>
+    </Profile>
+
+    <!-- Dialog list item -->
+    <Profile name="dm_dialogListItem" extends="baseReference" with="anchorTopStretchingX">
+        <height value="36px"/>
+        <imageColor value="0.15 0.15 0.15 0.8"/>
+        <imageSelectedColor value="0.0227 0.5346 0.8519 0.6"/>
+    </Profile>
+
+    <!-- Dialog empty list item -->
+    <Profile name="dm_dialogListItemEmpty" extends="baseReference" with="anchorTopStretchingX">
+        <height value="36px"/>
+        <visible value="false"/>
+    </Profile>
+
+    <!-- Dialog list item text -->
+    <Profile name="dm_dialogListItemText" extends="baseReference" with="anchorMiddleLeft">
+        <size value="200px 28px"/>
+        <textSize value="14px"/>
+        <textColor value="$preset_colorWhite"/>
+        <textAlignment value="left"/>
+    </Profile>
+
+    <!-- Dialog clipper -->
+    <Profile name="dm_dialogClipper" extends="baseReference">
+        <size value="700px 10px"/>
+        <visible value="false"/>
+    </Profile>
+
+    <!-- Dialog slider box -->
+    <Profile name="dm_dialogSliderBox" extends="baseReference" with="anchorTopRight">
+        <position value="360px -150px"/>
+        <size value="20px 350px"/>
+    </Profile>
+
+    <!-- Dialog slider -->
+    <Profile name="dm_dialogSlider" extends="baseReference">
+        <size value="20px 350px"/>
+    </Profile>
+</GUIProfiles>

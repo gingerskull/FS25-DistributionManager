@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<modDesc descVersion="100">
+  <author>gingerskull</author>
+  <version>0.1.0.0</version>
+  <title>
+    <en>Distribution Manager</en>
+  </title>
+  <description>
+    <en>
+      <![CDATA[Distribution Manager
+
+Allows fine-grained control over how production outputs are distributed to other production facilities.
+
+Features:
+* New output mode: Manager — automatically distributes output to owned production points
+* Auto Equalize mode: Balances fill levels across destinations with configurable tolerance
+* Manual mode: Set custom percentages or caps per destination
+* Global-aware distribution: Multiple sources pushing to the same destination coordinate naturally
+* Overflow buffering: Excess output stays in source storage when destinations are full
+* Central overview screen accessible from the main menu
+* Full multiplayer support
+
+Changelog:
+v0.1.0.0
+- Initial release with core distribution engine
+]]>
+    </en>
+  </description>
+  <iconFilename>icon_DistributionManager.dds</iconFilename>
+
+  <multiplayer supported="true"/>
+  <extraSourceFiles>
+    <sourceFile filename="DistributionManager.lua" />
+  </extraSourceFiles>
+  <l10n>
+    <text name="dm_outputModeManager">
+      <en>Manager</en>
+    </text>
+    <text name="dm_buttonConfigureDistribution">
+      <en>Configure Distribution</en>
+    </text>
+    <text name="dm_dialogTitle">
+      <en>Distribution Settings</en>
+    </text>
+    <text name="dm_modeAuto">
+      <en>Auto Equalize</en>
+    </text>
+    <text name="dm_modeManual">
+      <en>Manual</en>
+    </text>
+    <text name="dm_toleranceLabel">
+      <en>Tolerance</en>
+    </text>
+    <text name="dm_destinationEnabled">
+      <en>Enabled</en>
+    </text>
+    <text name="dm_destinationDisabled">
+      <en>Disabled</en>
+    </text>
+    <text name="dm_noDestinations">
+      <en>No valid destinations found for this product.</en>
+    </text>
+    <text name="dm_menuTitle">
+      <en>Distribution Manager</en>
+    </text>
+    <text name="dm_productionColumn">
+      <en>Production</en>
+    </text>
+    <text name="dm_productColumn">
+      <en>Product</en>
+    </text>
+    <text name="dm_modeColumn">
+      <en>Mode</en>
+    </text>
+    <text name="dm_destinationsColumn">
+      <en>Destinations</en>
+    </text>
+    <text name="dm_modeLabel">
+      <en>Mode</en>
+    </text>
+  </l10n>
+</modDesc>
