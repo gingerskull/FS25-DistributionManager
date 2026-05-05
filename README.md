@@ -4,19 +4,19 @@
 
 ## What It Does
 
-When a production output is set to **Manager** mode, the mod takes over and distributes the product to destinations you choose — no trailers, no pallets, no hassle.
+When a production output is set to **Manager** mode, the mod takes over and distributes the product to destinations you choose - no trailers, no pallets, no hassle.
 
 ### Distribution Modes
 
-- **Auto Equalize** — Automatically balances fill levels across all enabled destinations. Products are sent where they are needed most, keeping everything in equilibrium.
-- **Manual** — Set your own rules. Assign percentages or caps to each destination for precise control over where products go.
+- **Auto Equalize** - Automatically balances fill levels across all enabled destinations. Products are sent where they are needed most, keeping everything in equilibrium.
+- **Manual** - Set your own rules. Assign percentages or caps to each destination for precise control over where products go.
 
 ### Key Features
 
-- **Smart Overflow Handling** — If all destinations are full, excess product stays safely in the source storage instead of disappearing.
-- **Multi-Source Coordination** — Multiple production points can feed the same destination without conflicts. Everything coordinates naturally.
-- **Works with Existing Mods** — Designed to coexist alongside other production mods like Production Revamp and ProductionStorageControl.
-- **Multiplayer Ready** — Fully supported in multiplayer. All players see the same configuration and distribution rules.
+- **Smart Overflow Handling** - If all destinations are full, excess product stays safely in the source storage instead of disappearing.
+- **Multi-Source Coordination** - Multiple production points can feed the same destination without conflicts. Everything coordinates naturally.
+- **Works with Existing Mods** - Designed to coexist alongside other production mods like Production Revamp and ProductionStorageControl.
+- **Multiplayer Ready** - Fully supported in multiplayer. All players see the same configuration and distribution rules.
 
 ## How to Use
 
