@@ -16,17 +16,20 @@ function DistributionManagerIngameMenu.init()
         DistributionManagerIngameMenu.updateMenuButtonsAppend
     )
 
-    -- Hook populateCellForItemInSection to show "Manager" text
-    InGameMenuProductionFrame.populateCellForItemInSection = Utils.appendedFunction(
-        InGameMenuProductionFrame.populateCellForItemInSection,
-        DistributionManagerIngameMenu.populateCellForItemInSection
-    )
-
     -- Hook output mode toggle to include MANAGER in cycle
     InGameMenuProductionFrame.onButtonToggleOutputMode = Utils.overwrittenFunction(
         InGameMenuProductionFrame.onButtonToggleOutputMode,
         DistributionManagerIngameMenu.onButtonToggleOutputMode
     )
+
+    -- Register MANAGER mode display text in vanilla lookup tables (best-effort).
+    -- If the game or another mod uses these tables, they'll naturally show "Manager".
+    if ProductionPoint.OUTPUT_MODE_L10N ~= nil then
+        ProductionPoint.OUTPUT_MODE_L10N[ProductionPoint.OUTPUT_MODE.MANAGER] = "dm_outputModeManager"
+    end
+    if ProductionPoint.OUTPUT_MODE_NAMES ~= nil then
+        ProductionPoint.OUTPUT_MODE_NAMES[ProductionPoint.OUTPUT_MODE.MANAGER] = "dm_outputModeManager"
+    end
 
     -- Setup main menu page
     DistributionManagerIngameMenu.setupMainMenuPage()
@@ -197,11 +200,37 @@ function DistributionManagerIngameMenu.ensureToggleHook()
     end
 end
 
+-- Re-apply our populate hook every time the menu buttons refresh.
+-- Another mod may have overwritten or appended to populateCellForItemInSection
+-- after DM init().  We wrap whatever is currently there and apply our text
+-- fix LAST so it always wins.
+function DistributionManagerIngameMenu.ensurePopulateHook()
+    local current = InGameMenuProductionFrame.populateCellForItemInSection
+    if current == DistributionManagerIngameMenu._dmPopulateWrapper then
+        return -- already our wrapper
+    end
+
+    DistributionManagerIngameMenu._dmPopulateWrapper = function(self, list, section, index, cell)
+        -- Call the current chain (vanilla + other mods) first
+        current(self, list, section, index, cell)
+        -- Now apply our text fix so it overwrites anything set before
+        DistributionManagerIngameMenu.populateCellForItemInSection(self, list, section, index, cell)
+    end
+
+    InGameMenuProductionFrame.populateCellForItemInSection = DistributionManagerIngameMenu._dmPopulateWrapper
+
+    if DistributionManager.debug then
+        print("--- DistributionManager: re-applied populateCellForItemInSection hook")
+    end
+end
+
 -- Add configure distribution button when MANAGER mode is active
 -- Note: defined with colon so Utils.appendedFunction passes the frame as self
 function DistributionManagerIngameMenu:updateMenuButtonsAppend()
     -- Make sure our mode-toggle logic wins against late-loading mods.
     DistributionManagerIngameMenu.ensureToggleHook()
+    -- Make sure our "Manager" label wins against late-loading mods too.
+    DistributionManagerIngameMenu.ensurePopulateHook()
 
     if self.pointsSelector:getState() == InGameMenuProductionFrame.POINTS_OWNED then
         if g_currentMission:getHasPlayerPermission("manageProductions") then

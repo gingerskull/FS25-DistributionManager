@@ -117,7 +117,6 @@ end
 
 -- Auto Equalize distribution
 function DistributionManagerEngine.distributeAuto(sourcePoint, fillTypeId, rule, destinations, availableAmount)
-    local tolerance = rule.tolerance or 0.05
     local totalDistributed = 0
 
     -- Gather fill percentages
@@ -152,23 +151,43 @@ function DistributionManagerEngine.distributeAuto(sourcePoint, fillTypeId, rule,
 
     local avgPercent = totalFill / totalCapacity
 
-    -- Calculate how much each destination needs to reach average
+    -- Identify needy destinations (strictly below average)
+    local needyDests = {}
     local totalDeficit = 0
+
     for _, data in ipairs(destData) do
-        -- Only send if below average (with tolerance)
-        local targetPercent = avgPercent
-        local deficit = (targetPercent - data.fillPercent) * data.capacity
-        if deficit > tolerance * data.capacity then
+        if data.fillPercent < avgPercent and data.freeSpace > 0 then
+            local deficit = (avgPercent - data.fillPercent) * data.capacity
             data.deficit = math.min(deficit, data.freeSpace)
             totalDeficit = totalDeficit + data.deficit
+            table.insert(needyDests, data)
         else
             data.deficit = 0
         end
     end
 
-    if totalDeficit <= 0 then
-        -- All destinations are balanced or full.
-        -- If there's available output and free space, distribute proportionally to free space.
+    -- If imbalance is tiny, treat as balanced and distribute proportionally.
+    -- Threshold: 100L or 0.1% of total capacity, whichever is larger.
+    local balanceThreshold = math.max(100, totalCapacity * 0.001)
+
+    if #needyDests > 0 and totalDeficit > balanceThreshold then
+        -- Significant imbalance: distribute ONLY to needy destinations,
+        -- proportionally to their deficit, capped by available amount.
+        local amountToDistribute = math.min(availableAmount, totalDeficit)
+
+        for _, data in ipairs(needyDests) do
+            local ratio = data.deficit / totalDeficit
+            local sendAmount = math.min(amountToDistribute * ratio, data.freeSpace)
+
+            if sendAmount >= 1.0 then
+                DistributionManagerEngine.sendToDestination(data.dest.point, fillTypeId, sendAmount)
+                data.dest.rule.lastSentAmount = sendAmount
+                totalDistributed = totalDistributed + sendAmount
+            end
+        end
+    else
+        -- Balanced (or no needy destinations): distribute available amount
+        -- proportionally to free space so all destinations fill evenly.
         local totalFreeSpace = 0
         for _, data in ipairs(destData) do
             totalFreeSpace = totalFreeSpace + data.freeSpace
@@ -180,29 +199,12 @@ function DistributionManagerEngine.distributeAuto(sourcePoint, fillTypeId, rule,
                     local ratio = data.freeSpace / totalFreeSpace
                     local sendAmount = math.min(availableAmount * ratio, data.freeSpace)
 
-                    if sendAmount > 0 then
+                    if sendAmount >= 1.0 then
                         DistributionManagerEngine.sendToDestination(data.dest.point, fillTypeId, sendAmount)
                         data.dest.rule.lastSentAmount = sendAmount
                         totalDistributed = totalDistributed + sendAmount
                     end
                 end
-            end
-        end
-        return totalDistributed
-    end
-
-    -- Distribute available amount proportionally to deficits
-    local amountToDistribute = math.min(availableAmount, totalDeficit)
-
-    for _, data in ipairs(destData) do
-        if data.deficit > 0 then
-            local ratio = data.deficit / totalDeficit
-            local sendAmount = math.min(amountToDistribute * ratio, data.freeSpace)
-
-            if sendAmount > 0 then
-                DistributionManagerEngine.sendToDestination(data.dest.point, fillTypeId, sendAmount)
-                data.dest.rule.lastSentAmount = sendAmount
-                totalDistributed = totalDistributed + sendAmount
             end
         end
     end
@@ -258,7 +260,7 @@ function DistributionManagerEngine.distributeManual(sourcePoint, fillTypeId, rul
     for id, alloc in pairs(allocations) do
         local sendAmount = math.min(alloc.amount, remainingAmount)
 
-        if sendAmount > 0 then
+        if sendAmount >= 1.0 then
             DistributionManagerEngine.sendToDestination(alloc.dest.point, fillTypeId, sendAmount)
             alloc.dest.rule.lastSentAmount = sendAmount
             totalDistributed = totalDistributed + sendAmount
@@ -285,6 +287,12 @@ function DistributionManagerEngine.sendToDestination(destPoint, fillTypeId, amou
     end
 
     local actualAmount = math.min(amount, freeSpace)
+
+    -- Skip sub-liter transfers to avoid noise and unnecessary storage updates
+    if actualAmount < 1.0 then
+        return
+    end
+
     destPoint.storage:setFillLevel(currentFill + actualAmount, fillTypeId)
 
     if DistributionManager.debug then
