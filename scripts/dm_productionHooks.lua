@@ -29,13 +29,15 @@ function DistributionManagerProductionHooks.init()
     )
 
     -- Hook writeStream (instance method, colon syntax)
-    ProductionPoint.writeStream = Utils.prependedFunction(
+    -- Use appendedFunction so our data is written AFTER vanilla/PSC stream data.
+    ProductionPoint.writeStream = Utils.appendedFunction(
         ProductionPoint.writeStream,
         DistributionManagerProductionHooks.writeStream
     )
 
     -- Hook readStream (instance method, colon syntax)
-    ProductionPoint.readStream = Utils.prependedFunction(
+    -- Use appendedFunction so our data is read AFTER vanilla/PSC stream data.
+    ProductionPoint.readStream = Utils.appendedFunction(
         ProductionPoint.readStream,
         DistributionManagerProductionHooks.readStream
     )
@@ -57,6 +59,14 @@ function DistributionManagerProductionHooks.init()
         ProductionPoint.updateProduction,
         DistributionManagerProductionHooks.updateProduction
     )
+
+    -- Hook career save to trigger custom XML save (proven pattern from PalletSpawnStore)
+    if FSCareerMissionInfo ~= nil then
+        FSCareerMissionInfo.saveToXMLFile = Utils.overwrittenFunction(
+            FSCareerMissionInfo.saveToXMLFile,
+            DistributionManagerProductionHooks.onCareerSaveToXMLFile
+        )
+    end
 end
 
 -- Register XML paths for savegame (static method)
@@ -67,6 +77,169 @@ function DistributionManagerProductionHooks.registerSavegameXMLPaths(schema, bas
     schema:register(XMLValueType.STRING, basePath .. ".dmDistributionRule(?)#mode", "distribution mode (AUTO or MANUAL)")
     schema:register(XMLValueType.FLOAT, basePath .. ".dmDistributionRule(?)#tolerance", "tolerance for auto equalize", 0.05)
     schema:register(XMLValueType.STRING, basePath .. ".dmDistributionRule(?)#destinations", "serialized destinations table")
+end
+
+-- Custom XML save/load (proven PalletSpawnStore pattern)
+-- Saves DM rules to distributionManager.xml in the savegame folder.
+function DistributionManagerProductionHooks.saveToCustomXML()
+    if g_currentMission == nil or g_currentMission.missionInfo == nil then
+        return
+    end
+
+    local savegameFolderPath = g_currentMission.missionInfo.savegameDirectory
+    if savegameFolderPath == nil then
+        return
+    end
+
+    local path = savegameFolderPath .. "/distributionManager.xml"
+    local key = "distributionManager"
+
+    local xmlFile = XMLFile.create(key, path, key)
+    if xmlFile == nil then
+        print("DM ERROR: Failed to create custom XML file at " .. path)
+        return
+    end
+
+    local index = 0
+    local points = g_currentMission.productionChainManager.productionPoints
+    if points ~= nil then
+        for _, productionPoint in pairs(points) do
+            if productionPoint.dmDistributionRules ~= nil then
+                local owningPlaceable = productionPoint.owningPlaceable
+                local uniqueId = owningPlaceable and owningPlaceable.uniqueId
+                if uniqueId ~= nil then
+                    for fillTypeId, rule in pairs(productionPoint.dmDistributionRules) do
+                        local fillTypeName = g_fillTypeManager:getFillTypeNameByIndex(fillTypeId)
+                        if fillTypeName ~= nil then
+                            local subKey = string.format(".rule(%d)", index)
+                            xmlFile:setString(key .. subKey .. "#placeableUniqueId", tostring(uniqueId))
+                            xmlFile:setString(key .. subKey .. "#fillType", fillTypeName)
+                            xmlFile:setBool(key .. subKey .. "#managerMode", rule.managerMode == true)
+                            xmlFile:setBool(key .. subKey .. "#active", rule.active == true)
+                            xmlFile:setString(key .. subKey .. "#mode", rule.mode or "AUTO")
+                            xmlFile:setFloat(key .. subKey .. "#tolerance", rule.tolerance or 0.05)
+                            if rule.destinations ~= nil then
+                                local destStr = DistributionManagerProductionHooks.serializeDestinations(rule.destinations)
+                                xmlFile:setString(key .. subKey .. "#destinations", destStr)
+                            end
+                            index = index + 1
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    xmlFile:save()
+    xmlFile:delete()
+
+    if DistributionManager.debug then
+        print(string.format("DM: Saved %d rules to custom XML (%s)", index, path))
+    end
+end
+
+function DistributionManagerProductionHooks.loadFromCustomXML()
+    if g_currentMission == nil or g_currentMission.missionInfo == nil then
+        return
+    end
+
+    local savegameFolderPath = g_currentMission.missionInfo.savegameDirectory
+    if savegameFolderPath == nil then
+        return
+    end
+
+    local path = savegameFolderPath .. "/distributionManager.xml"
+    local key = "distributionManager"
+
+    if not fileExists(path) then
+        if DistributionManager.debug then
+            print("DM: No custom XML file found at " .. path)
+        end
+        return
+    end
+
+    local xmlFile = XMLFile.load(key, path, key)
+    if xmlFile == nil then
+        print("DM ERROR: Failed to load custom XML file at " .. path)
+        return
+    end
+
+    local loadedCount = 0
+    xmlFile:iterate(key .. ".rule", function(_, entryKey)
+        local uniqueId = xmlFile:getString(entryKey .. "#placeableUniqueId")
+        local fillTypeName = xmlFile:getString(entryKey .. "#fillType")
+        local managerMode = xmlFile:getBool(entryKey .. "#managerMode", false)
+        local active = xmlFile:getBool(entryKey .. "#active", false)
+        local mode = xmlFile:getString(entryKey .. "#mode", "AUTO")
+        local tolerance = xmlFile:getFloat(entryKey .. "#tolerance", 0.05)
+        local destinationsStr = xmlFile:getString(entryKey .. "#destinations", "")
+
+        if uniqueId ~= nil and fillTypeName ~= nil then
+            local fillTypeId = g_fillTypeManager:getFillTypeIndexByName(fillTypeName)
+            if fillTypeId ~= nil then
+                local productionPoint = DistributionManagerProductionHooks.getProductionPointByUniqueId(uniqueId)
+                if productionPoint ~= nil then
+                    if productionPoint.dmDistributionRules == nil then
+                        productionPoint.dmDistributionRules = {}
+                    end
+                    productionPoint.dmDistributionRules[fillTypeId] = {
+                        managerMode = managerMode,
+                        active = active,
+                        mode = mode,
+                        tolerance = tolerance,
+                        destinations = DistributionManagerProductionHooks.deserializeDestinations(destinationsStr)
+                    }
+
+                    -- Clear vanilla mode flags so getOutputDistributionMode returns MANAGER
+                    if managerMode then
+                        productionPoint.outputFillTypeIdsDirectSell[fillTypeId] = nil
+                        productionPoint.outputFillTypeIdsAutoDeliver[fillTypeId] = nil
+                        if productionPoint.outputFillTypeIdsStorage ~= nil then
+                            productionPoint.outputFillTypeIdsStorage[fillTypeId] = nil
+                        end
+                    end
+
+                    loadedCount = loadedCount + 1
+                else
+                    if DistributionManager.debug then
+                        print("DM WARNING: Could not find production point with uniqueId " .. tostring(uniqueId))
+                    end
+                end
+            end
+        end
+    end)
+
+    xmlFile:delete()
+
+    if DistributionManager.debug then
+        print(string.format("DM: Loaded %d rules from custom XML (%s)", loadedCount, path))
+    end
+end
+
+function DistributionManagerProductionHooks.getProductionPointByUniqueId(wantedUniqueId)
+    if wantedUniqueId == nil then
+        return nil
+    end
+    local wanted = tostring(wantedUniqueId)
+    local points = g_currentMission.productionChainManager.productionPoints
+    if points == nil then
+        return nil
+    end
+    for _, productionPoint in pairs(points) do
+        local owningPlaceable = productionPoint.owningPlaceable
+        local uniqueId = owningPlaceable and owningPlaceable.uniqueId
+        if uniqueId ~= nil and tostring(uniqueId) == wanted then
+            return productionPoint
+        end
+    end
+    return nil
+end
+
+function DistributionManagerProductionHooks.onCareerSaveToXMLFile(missionInfo, superFunc, xmlFile, key)
+    superFunc(missionInfo, xmlFile, key)
+    if g_server ~= nil and g_currentMission ~= nil and g_currentMission.missionInfo == missionInfo then
+        DistributionManagerProductionHooks.saveToCustomXML()
+    end
 end
 
 -- Save distribution rules to savegame
@@ -125,6 +298,19 @@ function DistributionManagerProductionHooks:loadFromXMLFile(superFunc, xmlFile, 
         end
     end)
 
+    -- After loading rules, clear vanilla mode flags for any MANAGER-mode outputs
+    -- so that getOutputDistributionMode returns MANAGER correctly even if other
+    -- mods (e.g. ProductionStorageControl) defaulted them during load.
+    for fillTypeId, rule in pairs(self.dmDistributionRules) do
+        if rule.managerMode then
+            self.outputFillTypeIdsDirectSell[fillTypeId] = nil
+            self.outputFillTypeIdsAutoDeliver[fillTypeId] = nil
+            if self.outputFillTypeIdsStorage ~= nil then
+                self.outputFillTypeIdsStorage[fillTypeId] = nil
+            end
+        end
+    end
+
     return success
 end
 
@@ -167,8 +353,8 @@ end
 
 -- MP: Write stream
 -- Colon syntax: self = ProductionPoint instance, streamId = streamId, connection = connection
+-- appendedFunction: vanilla/PSC data is already written; we only append our extra data.
 function DistributionManagerProductionHooks:writeStream(streamId, connection)
-    ProductionPoint:superClass().writeStream(self, streamId, connection)
     if not connection:getIsServer() then
         if self.dmDistributionRules ~= nil then
             streamWriteUInt8(streamId, table.size(self.dmDistributionRules))
@@ -189,8 +375,8 @@ end
 
 -- MP: Read stream
 -- Colon syntax: self = ProductionPoint instance, streamId = streamId, connection = connection
+-- appendedFunction: vanilla/PSC data is already read; we only read our extra data.
 function DistributionManagerProductionHooks:readStream(streamId, connection)
-    ProductionPoint:superClass().readStream(self, streamId, connection)
     if connection:getIsServer() then
         self.dmDistributionRules = {}
         local numRules = streamReadUInt8(streamId)
@@ -208,6 +394,18 @@ function DistributionManagerProductionHooks:readStream(streamId, connection)
                 tolerance = tolerance,
                 destinations = DistributionManagerProductionHooks.deserializeDestinations(destStr)
             }
+        end
+
+        -- After stream sync, clear vanilla mode flags for any MANAGER-mode outputs
+        -- so that getOutputDistributionMode returns MANAGER correctly.
+        for fillTypeId, rule in pairs(self.dmDistributionRules) do
+            if rule.managerMode then
+                self.outputFillTypeIdsDirectSell[fillTypeId] = nil
+                self.outputFillTypeIdsAutoDeliver[fillTypeId] = nil
+                if self.outputFillTypeIdsStorage ~= nil then
+                    self.outputFillTypeIdsStorage[fillTypeId] = nil
+                end
+            end
         end
     end
 end

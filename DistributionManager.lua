@@ -37,6 +37,8 @@ function DistributionManager:loadMap()
 
     -- Register GUI dialogs
     DistributionSettingsDialog.register()
+
+    self.dmHasLoaded = false
 end
 
 function DistributionManager:deleteMap()
@@ -45,11 +47,35 @@ function DistributionManager:deleteMap()
     end
     DistributionManagerRegistry.delete()
     DistributionManagerEngine.delete()
+    self.dmHasLoaded = false
 end
 
 function DistributionManager:update(dt)
     -- Main update loop if needed
     DistributionManagerEngine.update(dt)
+
+    -- Load custom XML after production points are available (PalletSpawnStore pattern)
+    if g_server ~= nil and not self.dmHasLoaded then
+        local mission = g_currentMission
+        if mission ~= nil
+            and mission.productionChainManager ~= nil
+            and mission.missionInfo ~= nil then
+
+            local points = mission.productionChainManager.productionPoints
+            if points ~= nil then
+                local hasAny = false
+                for _ in pairs(points) do
+                    hasAny = true
+                    break
+                end
+
+                if hasAny then
+                    self.dmHasLoaded = true
+                    DistributionManagerProductionHooks.loadFromCustomXML()
+                end
+            end
+        end
+    end
 end
 
 addModEventListener(DistributionManager)
