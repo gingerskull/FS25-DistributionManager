@@ -100,7 +100,8 @@ function DistributionSettingsDialog:updateContent()
     for destId, destRule in pairs(self.workingRule.destinations) do
         for _, point in ipairs(allPoints) do
             if point:getOwnerFarmId() == farmId then
-                if NetworkUtil.getObjectId(point) == destId then
+                local pointUniqueId = point.owningPlaceable and point.owningPlaceable.uniqueId
+                if pointUniqueId ~= nil and tostring(pointUniqueId) == tostring(destId) then
                     if point.inputFillTypeIds ~= nil and point.inputFillTypeIds[self.fillTypeId] ~= nil then
                         local currentFill = point.storage:getFillLevel(self.fillTypeId)
                         local capacity = point.storage:getCapacity(self.fillTypeId)

@@ -95,8 +95,8 @@ function DistributionManagerEngine.resolveDestinations(destRules, farmId, fillTy
         if destRule.enabled then
             for _, point in ipairs(allPoints) do
                 if point:getOwnerFarmId() == farmId then
-                    local pointId = NetworkUtil.getObjectId(point)
-                    if pointId == destId then
+                    local pointUniqueId = point.owningPlaceable and point.owningPlaceable.uniqueId
+                    if pointUniqueId ~= nil and tostring(pointUniqueId) == tostring(destId) then
                         -- Verify it still accepts this fill type
                         if point.inputFillTypeIds ~= nil and point.inputFillTypeIds[fillTypeId] ~= nil then
                             table.insert(result, {

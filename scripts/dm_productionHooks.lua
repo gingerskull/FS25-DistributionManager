@@ -318,8 +318,8 @@ end
 function DistributionManagerProductionHooks.serializeDestinations(destinations)
     local parts = {}
     for destId, destInfo in pairs(destinations) do
-        local part = string.format("%d:%d:%s:%s:%s",
-            destId,
+        local part = string.format("%s:%d:%s:%s:%s",
+            tostring(destId),
             destInfo.enabled and 1 or 0,
             tostring(destInfo.manualPercentage or ""),
             tostring(destInfo.manualAmount or ""),
@@ -338,9 +338,9 @@ function DistributionManagerProductionHooks.deserializeDestinations(str)
     end
 
     for part in string.gmatch(str, "([^;]+)") do
-        local destId, enabled, manualPerc, manualAmt, lastSent = string.match(part, "(%d+):(%d):([^:]*):([^:]*):([^:]*)")
+        local destId, enabled, manualPerc, manualAmt, lastSent = string.match(part, "([^:]+):(%d):([^:]*):([^:]*):([^:]*)")
         if destId ~= nil then
-            destinations[tonumber(destId)] = {
+            destinations[destId] = {
                 enabled = enabled == "1",
                 manualPercentage = manualPerc ~= "" and tonumber(manualPerc) or nil,
                 manualAmount = manualAmt ~= "" and tonumber(manualAmt) or nil,
@@ -485,14 +485,17 @@ function DistributionManagerProductionHooks.autoPopulateDestinations(self, outpu
     for _, destPoint in ipairs(allPoints) do
         if destPoint ~= self and destPoint:getOwnerFarmId() == farmId then
             if destPoint.inputFillTypeIds ~= nil and destPoint.inputFillTypeIds[outputFillTypeId] ~= nil then
-                local destId = NetworkUtil.getObjectId(destPoint)
-                if destId ~= nil and rule.destinations[destId] == nil then
-                    rule.destinations[destId] = {
-                        enabled = false,
-                        manualPercentage = nil,
-                        manualAmount = nil,
-                        lastSentAmount = 0
-                    }
+                local destUniqueId = destPoint.owningPlaceable and destPoint.owningPlaceable.uniqueId
+                if destUniqueId ~= nil then
+                    local destKey = tostring(destUniqueId)
+                    if rule.destinations[destKey] == nil then
+                        rule.destinations[destKey] = {
+                            enabled = false,
+                            manualPercentage = nil,
+                            manualAmount = nil,
+                            lastSentAmount = 0
+                        }
+                    end
                 end
             end
         end
