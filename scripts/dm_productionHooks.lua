@@ -54,18 +54,22 @@ function DistributionManagerProductionHooks.init()
         DistributionManagerProductionHooks.setOutputDistributionMode
     )
 
-    -- Hook updateProduction (instance method, colon syntax)
-    ProductionPoint.updateProduction = Utils.overwrittenFunction(
-        ProductionPoint.updateProduction,
-        DistributionManagerProductionHooks.updateProduction
-    )
-
     -- Hook career save to trigger custom XML save (proven pattern from PalletSpawnStore)
     if FSCareerMissionInfo ~= nil then
         FSCareerMissionInfo.saveToXMLFile = Utils.overwrittenFunction(
             FSCareerMissionInfo.saveToXMLFile,
             DistributionManagerProductionHooks.onCareerSaveToXMLFile
         )
+    end
+end
+
+-- Clear vanilla output mode flags for a fill type so that getOutputDistributionMode
+-- returns MANAGER correctly. Must be called whenever managerMode is set to true.
+function DistributionManagerProductionHooks.clearVanillaModeFlags(productionPoint, fillTypeId)
+    productionPoint.outputFillTypeIdsDirectSell[fillTypeId] = nil
+    productionPoint.outputFillTypeIdsAutoDeliver[fillTypeId] = nil
+    if productionPoint.outputFillTypeIdsStorage ~= nil then
+        productionPoint.outputFillTypeIdsStorage[fillTypeId] = nil
     end
 end
 
@@ -192,11 +196,7 @@ function DistributionManagerProductionHooks.loadFromCustomXML()
 
                     -- Clear vanilla mode flags so getOutputDistributionMode returns MANAGER
                     if managerMode then
-                        productionPoint.outputFillTypeIdsDirectSell[fillTypeId] = nil
-                        productionPoint.outputFillTypeIdsAutoDeliver[fillTypeId] = nil
-                        if productionPoint.outputFillTypeIdsStorage ~= nil then
-                            productionPoint.outputFillTypeIdsStorage[fillTypeId] = nil
-                        end
+                        DistributionManagerProductionHooks.clearVanillaModeFlags(productionPoint, fillTypeId)
                     end
 
                     loadedCount = loadedCount + 1
@@ -303,11 +303,7 @@ function DistributionManagerProductionHooks:loadFromXMLFile(superFunc, xmlFile, 
     -- mods (e.g. ProductionStorageControl) defaulted them during load.
     for fillTypeId, rule in pairs(self.dmDistributionRules) do
         if rule.managerMode then
-            self.outputFillTypeIdsDirectSell[fillTypeId] = nil
-            self.outputFillTypeIdsAutoDeliver[fillTypeId] = nil
-            if self.outputFillTypeIdsStorage ~= nil then
-                self.outputFillTypeIdsStorage[fillTypeId] = nil
-            end
+            DistributionManagerProductionHooks.clearVanillaModeFlags(self, fillTypeId)
         end
     end
 
@@ -400,11 +396,7 @@ function DistributionManagerProductionHooks:readStream(streamId, connection)
         -- so that getOutputDistributionMode returns MANAGER correctly.
         for fillTypeId, rule in pairs(self.dmDistributionRules) do
             if rule.managerMode then
-                self.outputFillTypeIdsDirectSell[fillTypeId] = nil
-                self.outputFillTypeIdsAutoDeliver[fillTypeId] = nil
-                if self.outputFillTypeIdsStorage ~= nil then
-                    self.outputFillTypeIdsStorage[fillTypeId] = nil
-                end
+                DistributionManagerProductionHooks.clearVanillaModeFlags(self, fillTypeId)
             end
         end
     end
@@ -447,11 +439,7 @@ function DistributionManagerProductionHooks:setOutputDistributionMode(superFunc,
             rule.active = true
         end
         -- Clear other mode flags for this fill type
-        self.outputFillTypeIdsDirectSell[outputFillTypeId] = nil
-        self.outputFillTypeIdsAutoDeliver[outputFillTypeId] = nil
-        if self.outputFillTypeIdsStorage ~= nil then
-            self.outputFillTypeIdsStorage[outputFillTypeId] = nil
-        end
+        DistributionManagerProductionHooks.clearVanillaModeFlags(self, outputFillTypeId)
 
         -- Send event
         DistributionManagerOutputModeEvent.sendEvent(self, outputFillTypeId, ProductionPoint.OUTPUT_MODE.MANAGER, noEventSend)
@@ -500,11 +488,4 @@ function DistributionManagerProductionHooks.autoPopulateDestinations(self, outpu
             end
         end
     end
-end
-
--- Overwrite updateProduction to intercept MANAGER mode outputs
--- Colon syntax: self = ProductionPoint instance, superFunc = original function
-function DistributionManagerProductionHooks:updateProduction(superFunc)
-    -- Call original update first (produces output into storage)
-    superFunc(self)
 end

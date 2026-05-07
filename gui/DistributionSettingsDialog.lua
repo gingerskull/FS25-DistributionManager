@@ -136,6 +136,10 @@ function DistributionSettingsDialog:updateContent()
     self.destinationsList:reloadData()
 
     -- Update mode display
+    self:updateModeDisplay()
+end
+
+function DistributionSettingsDialog:updateModeDisplay()
     if self.modeText ~= nil then
         local modeStr = self.currentMode == "AUTO" and g_i18n:getText("dm_modeAuto") or g_i18n:getText("dm_modeManual")
         self.modeText:setText(string.format("%s: %s", g_i18n:getText("dm_modeLabel") or "Mode", modeStr))
@@ -218,9 +222,6 @@ function DistributionSettingsDialog:onClickToggleMode()
     if self.workingRule ~= nil then
         self.workingRule.mode = self.workingRule.mode == "AUTO" and "MANUAL" or "AUTO"
         self.currentMode = self.workingRule.mode
-        if self.modeText ~= nil then
-            local modeStr = self.currentMode == "AUTO" and g_i18n:getText("dm_modeAuto") or g_i18n:getText("dm_modeManual")
-            self.modeText:setText(string.format("%s: %s", g_i18n:getText("dm_modeLabel") or "Mode", modeStr))
-        end
+        self:updateModeDisplay()
     end
 end

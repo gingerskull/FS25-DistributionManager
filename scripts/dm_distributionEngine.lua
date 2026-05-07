@@ -19,7 +19,7 @@ end
 function DistributionManagerEngine.update(dt)
     DistributionManagerEngine.lastUpdateTime = DistributionManagerEngine.lastUpdateTime + dt
     if DistributionManagerEngine.lastUpdateTime >= DistributionManagerEngine.updateInterval then
-        DistributionManagerEngine.lastUpdateTime = 0
+        DistributionManagerEngine.lastUpdateTime = DistributionManagerEngine.lastUpdateTime - DistributionManagerEngine.updateInterval
         DistributionManagerEngine.distributeAll()
     end
 end
@@ -83,6 +83,20 @@ function DistributionManagerEngine.distributeOutput(sourcePoint, fillTypeId, rul
     end
 end
 
+-- Build a uniqueId -> ProductionPoint lookup table for O(1) destination resolution.
+function DistributionManagerEngine.buildPointLookup(allPoints, farmId)
+    local lookup = {}
+    for _, point in ipairs(allPoints) do
+        if point:getOwnerFarmId() == farmId then
+            local uniqueId = point.owningPlaceable and point.owningPlaceable.uniqueId
+            if uniqueId ~= nil then
+                lookup[tostring(uniqueId)] = point
+            end
+        end
+    end
+    return lookup
+end
+
 -- Resolve destination IDs to actual ProductionPoint objects
 function DistributionManagerEngine.resolveDestinations(destRules, farmId, fillTypeId)
     local result = {}
@@ -91,22 +105,18 @@ function DistributionManagerEngine.resolveDestinations(destRules, farmId, fillTy
         return result
     end
 
+    local pointLookup = DistributionManagerEngine.buildPointLookup(allPoints, farmId)
+
     for destId, destRule in pairs(destRules) do
         if destRule.enabled then
-            for _, point in ipairs(allPoints) do
-                if point:getOwnerFarmId() == farmId then
-                    local pointUniqueId = point.owningPlaceable and point.owningPlaceable.uniqueId
-                    if pointUniqueId ~= nil and tostring(pointUniqueId) == tostring(destId) then
-                        -- Verify it still accepts this fill type
-                        if point.inputFillTypeIds ~= nil and point.inputFillTypeIds[fillTypeId] ~= nil then
-                            table.insert(result, {
-                                point = point,
-                                rule = destRule,
-                                id = destId
-                            })
-                        end
-                        break
-                    end
+            local point = pointLookup[tostring(destId)]
+            if point ~= nil then
+                if point.inputFillTypeIds ~= nil and point.inputFillTypeIds[fillTypeId] ~= nil then
+                    table.insert(result, {
+                        point = point,
+                        rule = destRule,
+                        id = destId
+                    })
                 end
             end
         end
@@ -278,8 +288,8 @@ function DistributionManagerEngine.sendToDestination(destPoint, fillTypeId, amou
         return
     end
 
-    local currentFill = destPoint.storage:getFillLevel(fillTypeId)
-    local capacity = destPoint.storage:getCapacity(fillTypeId)
+    local currentFill = destPoint.storage:getFillLevel(fillTypeId) or 0
+    local capacity = destPoint.storage:getCapacity(fillTypeId) or 0
     local freeSpace = capacity - currentFill
 
     if freeSpace <= 0 then

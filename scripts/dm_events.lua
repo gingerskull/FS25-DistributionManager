@@ -135,6 +135,9 @@ function DistributionManagerRuleUpdateEvent:run(connection)
 
     if self.productionPoint ~= nil and self.productionPoint.dmDistributionRules ~= nil then
         self.productionPoint.dmDistributionRules[self.fillTypeId] = self.rule
+        if self.rule.managerMode then
+            DistributionManagerProductionHooks.clearVanillaModeFlags(self.productionPoint, self.fillTypeId)
+        end
     end
 end
 

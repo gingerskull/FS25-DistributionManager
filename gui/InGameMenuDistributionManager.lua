@@ -40,6 +40,7 @@ end
 function InGameMenuDistributionManager:copyAttributes(src)
     InGameMenuDistributionManager:superClass().copyAttributes(self, src)
     self.i18n = src.i18n
+    self.messageCenter = src.messageCenter
 end
 
 function InGameMenuDistributionManager:onGuiSetupFinished()
