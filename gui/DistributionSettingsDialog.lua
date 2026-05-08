@@ -6,6 +6,17 @@
 DistributionSettingsDialog = {}
 local DistributionSettingsDialog_mt = Class(DistributionSettingsDialog, MessageDialog)
 
+DistributionSettingsDialog.BAR_COLOR_ENABLED = {0.0227, 0.5346, 0.8519, 0.95}
+DistributionSettingsDialog.BAR_COLOR_FULL = {0.62, 0.76, 0.12, 0.95}
+DistributionSettingsDialog.BAR_COLOR_DISABLED = {0.35, 0.35, 0.35, 0.65}
+DistributionSettingsDialog.BAR_COLOR_DISABLED_CAP = {0.24, 0.24, 0.24, 0.48}
+DistributionSettingsDialog.TEXT_COLOR_ENABLED = {0.82, 0.92, 1.0, 1.0}
+DistributionSettingsDialog.TEXT_COLOR_DISABLED = {0.55, 0.55, 0.55, 1.0}
+DistributionSettingsDialog.ICON_COLOR = {1, 1, 1, 1}
+DistributionSettingsDialog.ROW_ALPHA_ENABLED = 1.0
+DistributionSettingsDialog.ROW_ALPHA_DISABLED = 0.42
+DistributionSettingsDialog.VISIBLE_ROW_COUNT = 7
+
 function DistributionSettingsDialog.register()
     local dialog = DistributionSettingsDialog.new()
     local path = Utils.getFilename("gui/DistributionSettingsDialog.xml", DistributionManager.dir)
@@ -44,6 +55,163 @@ function DistributionSettingsDialog:onOpen()
     end
 end
 
+function DistributionSettingsDialog.clamp(value, minValue, maxValue)
+    return math.max(minValue, math.min(maxValue, value or 0))
+end
+
+function DistributionSettingsDialog:getSafeText(key, fallback)
+    if g_i18n ~= nil and g_i18n:hasText(key) then
+        return g_i18n:getText(key)
+    end
+
+    return fallback
+end
+
+function DistributionSettingsDialog:getPointImageFilename(point)
+    if point ~= nil and point.owningPlaceable ~= nil and point.owningPlaceable.getImageFilename ~= nil then
+        local filename = point.owningPlaceable:getImageFilename()
+        if filename ~= nil and filename ~= "" then
+            return filename
+        end
+    end
+
+    return Utils.getFilename("images/menuIcon.dds", DistributionManager.dir)
+end
+
+function DistributionSettingsDialog:formatPercent(percent)
+    return string.format("%d%%", math.floor((percent or 0) * 100 + 0.5))
+end
+
+function DistributionSettingsDialog:formatVolumeText(currentFill, capacity)
+    currentFill = currentFill or 0
+    capacity = capacity or 0
+
+    if g_i18n ~= nil and g_i18n.formatVolume ~= nil then
+        return string.format("%s / %s", g_i18n:formatVolume(currentFill, 0), g_i18n:formatVolume(capacity, 0))
+    end
+
+    return string.format("%.0f L / %.0f L", currentFill, capacity)
+end
+
+function DistributionSettingsDialog:formatManualText(dest)
+    if self.currentMode ~= "MANUAL" then
+        return "-"
+    end
+
+    if dest.manualAmount ~= nil and dest.manualAmount > 0 then
+        return self:formatVolumeText(dest.manualAmount, dest.capacity):match("^[^/]+") or string.format("%.0f L", dest.manualAmount)
+    end
+
+    if dest.manualPercentage ~= nil and dest.manualPercentage > 0 then
+        return self:formatPercent(dest.manualPercentage)
+    end
+
+    return self:getSafeText("dm_manualEqual", "Equal")
+end
+
+function DistributionSettingsDialog:setTextColor(element, color)
+    if element ~= nil and element.setTextColor ~= nil then
+        element:setTextColor(color[1], color[2], color[3], color[4])
+    end
+end
+
+function DistributionSettingsDialog:setBitmapColor(element, color)
+    if element ~= nil and element.setImageColor ~= nil then
+        element:setImageColor(nil, color[1], color[2], color[3], color[4])
+        if GuiOverlay ~= nil then
+            local function applyStateColor(state)
+                if state ~= nil then
+                    element:setImageColor(state, color[1], color[2], color[3], color[4])
+                end
+            end
+
+            applyStateColor(GuiOverlay.STATE_NORMAL)
+            applyStateColor(GuiOverlay.STATE_SELECTED)
+            applyStateColor(GuiOverlay.STATE_FOCUSED)
+            applyStateColor(GuiOverlay.STATE_HIGHLIGHTED)
+            applyStateColor(GuiOverlay.STATE_PRESSED)
+            applyStateColor(GuiOverlay.STATE_DISABLED)
+        end
+    elseif element ~= nil and element.color ~= nil then
+        element.color = {color[1], color[2], color[3], color[4]}
+    end
+end
+
+function DistributionSettingsDialog:setOverlayColor(overlay, state, color)
+    if GuiOverlay ~= nil and overlay ~= nil then
+        local overlayColor = GuiOverlay.getOverlayColor(overlay, state)
+        if overlayColor ~= nil then
+            overlayColor[1] = color[1]
+            overlayColor[2] = color[2]
+            overlayColor[3] = color[3]
+            overlayColor[4] = color[4]
+        end
+    end
+end
+
+function DistributionSettingsDialog:applyOverlayColorStates(overlay, color)
+    DistributionSettingsDialog:setOverlayColor(overlay, nil, color)
+
+    if GuiOverlay ~= nil then
+        DistributionSettingsDialog:setOverlayColor(overlay, GuiOverlay.STATE_NORMAL, color)
+        DistributionSettingsDialog:setOverlayColor(overlay, GuiOverlay.STATE_SELECTED, color)
+        DistributionSettingsDialog:setOverlayColor(overlay, GuiOverlay.STATE_FOCUSED, color)
+        DistributionSettingsDialog:setOverlayColor(overlay, GuiOverlay.STATE_HIGHLIGHTED, color)
+        DistributionSettingsDialog:setOverlayColor(overlay, GuiOverlay.STATE_PRESSED, color)
+        DistributionSettingsDialog:setOverlayColor(overlay, GuiOverlay.STATE_DISABLED, color)
+    end
+end
+
+function DistributionSettingsDialog:setThreePartCapColor(element, color)
+    if element ~= nil then
+        DistributionSettingsDialog:applyOverlayColorStates(element.startOverlay, color)
+        DistributionSettingsDialog:applyOverlayColorStates(element.endOverlay, color)
+    end
+end
+
+function DistributionSettingsDialog:setElementAlpha(element, alpha)
+    if element ~= nil and element.setAlpha ~= nil then
+        element:setAlpha(alpha)
+    end
+end
+
+function DistributionSettingsDialog:updateFillBar(cell, dest)
+    local barBg = cell:getAttribute("fillBarBg")
+    local bar = cell:getAttribute("fillBar")
+    if barBg == nil or bar == nil then
+        return
+    end
+
+    local percent = DistributionSettingsDialog.clamp(dest.fillPercent, 0, 1)
+    local maxWidth = barBg.size ~= nil and barBg.size[1] or bar.size[1]
+    local height = bar.size ~= nil and bar.size[2] or 0
+    local fillWidth = math.max(0, maxWidth * percent)
+
+    if percent > 0 and fillWidth < height then
+        fillWidth = height
+    end
+
+    bar:setSize(fillWidth, height)
+    bar:setVisible(percent > 0)
+
+    local bgColor = {0, 0, 0, dest.enabled and 0.55 or 0.35}
+    DistributionSettingsDialog:setBitmapColor(barBg, bgColor)
+
+    local fillColor
+    if not dest.enabled then
+        fillColor = DistributionSettingsDialog.BAR_COLOR_DISABLED
+    elseif percent >= 0.95 then
+        fillColor = DistributionSettingsDialog.BAR_COLOR_FULL
+    else
+        fillColor = DistributionSettingsDialog.BAR_COLOR_ENABLED
+    end
+
+    DistributionSettingsDialog:setBitmapColor(bar, fillColor)
+    if not dest.enabled then
+        DistributionSettingsDialog:setThreePartCapColor(bar, DistributionSettingsDialog.BAR_COLOR_DISABLED_CAP)
+    end
+end
+
 function DistributionSettingsDialog:updateContent()
     self.destinations = {}
     self.selectedIndex = 1
@@ -53,8 +221,34 @@ function DistributionSettingsDialog:updateContent()
         return
     end
 
+    if self.productionPoint.dmDistributionRules == nil then
+        self.productionPoint.dmDistributionRules = {}
+    end
+
+    local fillType = g_fillTypeManager:getFillTypeByIndex(self.fillTypeId)
     if self.dialogTitleElement ~= nil then
-        self.dialogTitleElement:setText(g_i18n:getText("dm_dialogTitle"))
+        local title = g_i18n:getText("dm_dialogTitleProduct")
+        if fillType ~= nil then
+            self.dialogTitleElement:setText(string.format(title, fillType.title))
+        else
+            self.dialogTitleElement:setText(g_i18n:getText("dm_dialogTitle"))
+        end
+    end
+
+    if self.fillTypeIcon ~= nil then
+        if fillType ~= nil and fillType.hudOverlayFilename ~= nil and fillType.hudOverlayFilename ~= "" then
+            self.fillTypeIcon:setImageFilename(fillType.hudOverlayFilename)
+            DistributionSettingsDialog:setBitmapColor(self.fillTypeIcon, DistributionSettingsDialog.ICON_COLOR)
+            self.fillTypeIcon:setVisible(true)
+        else
+            self.fillTypeIcon:setVisible(false)
+        end
+    end
+
+    if self.productionIcon ~= nil then
+        self.productionIcon:setImageFilename(DistributionSettingsDialog:getPointImageFilename(self.productionPoint))
+        DistributionSettingsDialog:setBitmapColor(self.productionIcon, DistributionSettingsDialog.ICON_COLOR)
+        self.productionIcon:setVisible(true)
     end
 
     local liveRule = self.productionPoint.dmDistributionRules[self.fillTypeId]
@@ -103,11 +297,11 @@ function DistributionSettingsDialog:updateContent()
                 local pointUniqueId = point.owningPlaceable and point.owningPlaceable.uniqueId
                 if pointUniqueId ~= nil and tostring(pointUniqueId) == tostring(destId) then
                     if point.inputFillTypeIds ~= nil and point.inputFillTypeIds[self.fillTypeId] ~= nil then
-                        local currentFill = point.storage:getFillLevel(self.fillTypeId)
-                        local capacity = point.storage:getCapacity(self.fillTypeId)
+                        local currentFill = point.storage:getFillLevel(self.fillTypeId) or 0
+                        local capacity = point.storage:getCapacity(self.fillTypeId) or 0
                         local fillPercent = 0
                         if capacity > 0 then
-                            fillPercent = currentFill / capacity
+                            fillPercent = DistributionSettingsDialog.clamp(currentFill / capacity, 0, 1)
                         end
 
                         table.insert(self.destinations, {
@@ -118,7 +312,8 @@ function DistributionSettingsDialog:updateContent()
                             manualAmount = destRule.manualAmount,
                             currentFill = currentFill,
                             capacity = capacity,
-                            fillPercent = fillPercent
+                            fillPercent = fillPercent,
+                            imageFilename = DistributionSettingsDialog:getPointImageFilename(point)
                         })
                     end
                     break
@@ -135,6 +330,14 @@ function DistributionSettingsDialog:updateContent()
     self.destinationsList:setDataSource(self)
     self.destinationsList:reloadData()
 
+    if self.noDestinationsText ~= nil then
+        self.noDestinationsText:setVisible(#self.destinations == 0)
+    end
+
+    if self.destinationsSliderBox ~= nil then
+        self.destinationsSliderBox:setVisible(#self.destinations > DistributionSettingsDialog.VISIBLE_ROW_COUNT)
+    end
+
     -- Update mode display
     self:updateModeDisplay()
 end
@@ -142,7 +345,7 @@ end
 function DistributionSettingsDialog:updateModeDisplay()
     if self.modeText ~= nil then
         local modeStr = self.currentMode == "AUTO" and g_i18n:getText("dm_modeAuto") or g_i18n:getText("dm_modeManual")
-        self.modeText:setText(string.format("%s: %s", g_i18n:getText("dm_modeLabel") or "Mode", modeStr))
+        self.modeText:setText(string.format("%s: %s", g_i18n:getText("dm_modeLabel"), modeStr))
     end
 end
 
@@ -192,14 +395,33 @@ function DistributionSettingsDialog:populateCellForItemInSection(list, section, 
     if list == self.destinationsList then
         local dest = self.destinations[index]
         if dest ~= nil then
-            cell:getAttribute("name"):setText(dest.point:getName())
+            local rowAlpha = dest.enabled and DistributionSettingsDialog.ROW_ALPHA_ENABLED or DistributionSettingsDialog.ROW_ALPHA_DISABLED
+            DistributionSettingsDialog:setElementAlpha(cell, rowAlpha)
 
-            local statusText = string.format("%.0f / %.0f (%.0f%%)",
-                dest.currentFill, dest.capacity, dest.fillPercent * 100)
-            cell:getAttribute("status"):setText(statusText)
+            local icon = cell:getAttribute("icon")
+            if icon ~= nil then
+                icon:setImageFilename(dest.imageFilename)
+                DistributionSettingsDialog:setBitmapColor(icon, DistributionSettingsDialog.ICON_COLOR)
+                DistributionSettingsDialog:setElementAlpha(icon, rowAlpha)
+                icon:setVisible(dest.imageFilename ~= nil and dest.imageFilename ~= "")
+            end
+
+            cell:getAttribute("name"):setText(dest.point:getName())
+            cell:getAttribute("volume"):setText(self:formatVolumeText(dest.currentFill, dest.capacity))
+            cell:getAttribute("percent"):setText(self:formatPercent(dest.fillPercent))
+            cell:getAttribute("manual"):setText(self:formatManualText(dest))
 
             local enabledText = dest.enabled and g_i18n:getText("dm_destinationEnabled") or g_i18n:getText("dm_destinationDisabled")
             cell:getAttribute("enabled"):setText(enabledText)
+
+            local textColor = dest.enabled and DistributionSettingsDialog.TEXT_COLOR_ENABLED or DistributionSettingsDialog.TEXT_COLOR_DISABLED
+            DistributionSettingsDialog:setTextColor(cell:getAttribute("name"), textColor)
+            DistributionSettingsDialog:setTextColor(cell:getAttribute("volume"), textColor)
+            DistributionSettingsDialog:setTextColor(cell:getAttribute("percent"), textColor)
+            DistributionSettingsDialog:setTextColor(cell:getAttribute("enabled"), textColor)
+            DistributionSettingsDialog:setTextColor(cell:getAttribute("manual"), textColor)
+
+            self:updateFillBar(cell, dest)
         end
     end
 end
